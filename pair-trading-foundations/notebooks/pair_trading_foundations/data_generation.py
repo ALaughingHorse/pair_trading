@@ -125,7 +125,7 @@ def corr_coef(rs,df):
     vec2_sub1 = rows['Close_P2']
     return np.corrcoef(vec1_sub1, vec2_sub1)[0, 1]
 
-def generate_training_data(data, moving_average=20, training_len=500, test_len=120, entry_signal=1.5, exit_signal=1, calculate_label=True ,verbose=False, execution_class=ExecutePairTrading, combinations=None):
+def generate_training_data(data, moving_average=20, training_len=500, test_len=120, entry_signal=1.5, exit_signal=1, calculate_label=True ,verbose=False, execution_class=ExecutePairTrading, max_combinations=-1, combinations=None):
     """
     data: A pandas dataframe from the GetSP500Data module in ultils
     """
@@ -151,7 +151,9 @@ def generate_training_data(data, moving_average=20, training_len=500, test_len=1
     ts_pre_loop =  time()
     print(f"Took {ts_pre_loop - ts1} to initilize. Entering ticker pair loop")
     
-    max_combinations = 1
+    if max_combinations == -1:
+        max_combinations = len(combinations)
+            
     print(f"Max combination = {max_combinations}")
     for ticker1, ticker2 in combinations:
         ts2 = time()
@@ -186,8 +188,8 @@ def generate_training_data(data, moving_average=20, training_len=500, test_len=1
     
         start_ts = time()
         # Calculate the features
-        df['same_sector_flag'] = same_sector_flag
-        df['same_sub_industry_flag'] = same_sub_industry_flag
+#         df['same_sector_flag'] = same_sector_flag
+#         df['same_sub_industry_flag'] = same_sub_industry_flag
         df['abs_spread'] = (df['Close_P1'] - df['Close_P2']).abs()
         df['abs_spread_mean'] = df.rolling(training_len).abs_spread.mean()
         df['abs_spread_std'] = df.rolling(training_len).abs_spread.std()
