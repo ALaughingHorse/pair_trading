@@ -42,9 +42,10 @@ class ExecutePairTrading:
         
     def execute(self, vec1, vec2, dates, base_fund=100, split=0.5, verbose=False):
 
-        abs_spread = abs(np.array(vec1) - np.array(vec2))
-        entry_thresh = self.abs_spread_mean + self.entry_signal*self.abs_spread_std
-        exit_thresh = self.abs_spread_mean + self.exit_signal*self.abs_spread_std
+        abs_spread = np.array(vec1) - np.array(vec2)
+        abs_spread_std = np.std(abs_spread)
+        entry_thresh = self.abs_spread_mean + self.entry_signal*abs_spread_std
+        exit_thresh = self.abs_spread_mean + self.exit_signal*abs_spread_std
 
         # get the positions where the entry/exit signals appears
         entry_signals = np.array([1 if abs_spread[i] >= entry_thresh else 0 for i in range(0, len(abs_spread))])
@@ -109,7 +110,8 @@ class ExecutePairTrading:
             # temp_tb is sorted
             self.final_pl = temp_tb.pnl[0]
         self.final_pl_pct = self.final_pl/base_fund
-
+        self.abs_spread_std = abs_spread_std
+        
         return self
     
 def cos_sim(rs,df):
@@ -214,12 +216,11 @@ def generate_training_data(data, moving_average=20, training_len=500, test_len=1
         if calculate_label:
             start_ts = time()
             pnls = []
-            entry_signals = []
-            exit_signals = []
-            signal_pairs = []
+            abs_spread_std = []
             for idx in range(df.shape[0]):
                 if (idx < training_len) | (idx > df.shape[0]-test_len-1):
                     pnls.append(np.nan)
+                    abs_spread_std.append(np.nan)
                 else:
                     current_row = df.loc[idx]
                     result=execution_class(
@@ -235,7 +236,8 @@ def generate_training_data(data, moving_average=20, training_len=500, test_len=1
                                     base_fund=100,
                                 )
                     pnls.append(result.final_pl_pct)
-                     
+                    abs_spread_std.append(result.abs_spread_std)
+                    
             end_ts = time()
             if verbose:
                 print(f"{end_ts - start_ts} to calculate labels")
@@ -243,6 +245,7 @@ def generate_training_data(data, moving_average=20, training_len=500, test_len=1
             # Filter away except these
             df = df.filter(['Date', 'Ticker_P1', 'Ticker_P2'])
             df['pnls'] = pnls
+            df['actual_abs_spread_std'] = abs_spread_std
 
             labels_tb = pd.concat(
                 [
